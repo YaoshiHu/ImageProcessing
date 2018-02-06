@@ -1,6 +1,6 @@
 from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
+import png
 
 
 def noiseMatrix(height, width, q):
@@ -22,31 +22,26 @@ def noiseQuan(imageLocation, level):
     # Read a image and convert it to gray scale image as an array
     Ima = np.array(Image.open(imageLocation).convert('L'))
     [height, width] = Ima.shape
-    maximum = np.max(Ima)
-    minimum = np.min(Ima)
+    maximum = 255
+    minimum = 0
     b = maximum - minimum + 1
     q = b/level
     noise = noiseMatrix(height, width, q)
     qTable = quanTable(b, q, minimum)
     qImg = [[0 for i in range(width)] for j in range(height)]
-    MSE = 0
     for i in range(height):
         for j in range(width):
-            qImg[i][j] = qTable[int(max(min(maximum, noise[i][j] + Ima[i][j]), minimum)-minimum)] - noise[i][j]
-            MSE += (Ima[i][j]-qImg[i][j]) ** 2
-    MSE = MSE / (height*width)
-    return qImg, MSE
+            qImg[i][j] = int((qTable[int(max(min(maximum, noise[i][j] + Ima[i][j]), minimum)-minimum)] - noise[i][j])/q)
+    return qImg
 
 
-level = [64, 32, 16, 8]
-plt.figure()
-for i in range(len(level)):
-    result, mse = noiseQuan("./Einstein.jpg", level[i])
-    result = np.array(result)
-    plt.subplot(221+i)
-    plt.imshow(result, cmap=plt.cm.gray)
-    plt.axis('off')
-    plt.title('Level ' + str(level[i]) + ' image with MSE ' + str(mse))
-    print "Under level "+str(level[i])+", the MSE of the quantized image is "+str(mse)
-plt.show()
-
+def main(inputRoute, outputRoute, level = 2):
+    result = noiseQuan(inputRoute, level)
+    bitdepth = 1
+    while level > 2:
+        level = level/2
+        bitdepth = bitdepth+1
+    f = open(outputRoute, 'wb')
+    w = png.Writer(len(result[0]), len(result), greyscale=True, bitdepth=bitdepth)
+    w.write(f, result)
+    f.close()
