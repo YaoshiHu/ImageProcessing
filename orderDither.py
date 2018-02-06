@@ -1,7 +1,6 @@
 from PIL import Image
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 import png
 
 
@@ -50,30 +49,25 @@ def pattern(order):
     return np.array(origin)
 
 
-def orderDither(inputRoute, outputRoute, outputDPI=300, patternOrder=3):
-    # Read a image and convert it to gray scale image as an array
-    Img = np.array(Image.open(inputRoute).convert('L'))
-    # make a copy of the image
-    [height, width] = Img.shape
-
+def orderDither(Img, patternOrder):
     pttn = pattern(patternOrder)
     # pttnLen is the length of the matrix we derive
     pttnLen = int(math.pow(2, patternOrder))
     # level is the grayscale can be represented
-    level = pttnLen*pttnLen
-
+    level = pttnLen * pttnLen
     result = [[0 for i in range(len(Img[0]))] for j in range(len(Img))]
     for i in range(len(Img)):
         for j in range(len(Img[0])):
-            value = 1 if Img[i][j] > 256*pttn[i%pttnLen][j%pttnLen]/level else 0
+            value = 1 if Img[i][j] > 256 * pttn[i % pttnLen][j % pttnLen] / level else 0
             result[i][j] = value
-
-    plt.figure()
-    plt.imshow(result, cmap=plt.cm.gray)
-    plt.title('Order ' + str(patternOrder) + 'pattern dither quantized image')
-    plt.axis('off')
-    plt.savefig(outputRoute, dpi=outputDPI)
-    result.write('tmp.png', range(2))
+    return result
 
 
-orderDither('../img/Einstein.jpg', './ditherQuan.jpg', 600, 3)
+def main(inputRoute, outputRoute, patternOrder=3):
+    Img = np.array(Image.open(inputRoute).convert('L'))
+    [height, width] = Img.shape
+    result = orderDither(Img, patternOrder)
+    f = open(outputRoute, 'wb')
+    w = png.Writer(width, height, greyscale=True, bitdepth=1)
+    w.write(f, result)
+    f.close()
