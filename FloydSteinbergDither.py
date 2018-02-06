@@ -1,14 +1,16 @@
 from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
+import png
 
 
 # weight of bottom is 3/8
 # weight of right is 3/8
 # weight of bottom right is 2/8
-def quanImg(img, qtable):
+def quanImg(img, level):
     [height, width] = img.shape
     result = [[0 for i in range(width)] for j in range(height)]
+    qtable = quantable(256, level)
+    q = 256/level
     for i in range(height):
         for j in range(width):
             tmp = result[i][j]
@@ -25,27 +27,30 @@ def quanImg(img, qtable):
             if j < width-1:
                 tmp = min(max(result[i][j+1]+3*error/8, 0), 255)
                 result[i][j+1] = tmp
-    return result
+    for i in range(height):
+        for j in range(width):
+            result[i][j] = int(result[i][j]/q)
+    return np.array(result)
 
 
 # a function to create a quantable
 # Create the quantization table, b is the bin, l is the level, min is the minimum value, rng is the range of the input
 def quantable(b, l, min=0):
     q = b / l
-    table = [0] * b
+    table = [0 for i in range(b)]
     for i in range(b):
         table[i] = int(i / q) * q + q / 2 + min
     return table
 
 
-def fsDitherQuan(inputRoute, outputRoute, outputDPI=300, level=2):
+def main(inputRoute, outputRoute, level=2):
     img = np.array(Image.open(inputRoute).convert('L'))
-    plt.figure()
-    qtable = quantable(256, level)
-    result = quanImg(img, qtable)
-    result = np.array(result)
-    plt.imshow(result, cmap=plt.cm.gray)
-    plt.axis('off')
-    plt.title('Level ' + str(level) + " Floyed Steinberg Dither Quantized image")
-    plt.savefig(outputRoute, dpi=outputDPI)
-
+    result = quanImg(img, level)
+    bitdepth = 1
+    while level > 2:
+        level = level / 2
+        bitdepth = bitdepth + 1
+    f = open(outputRoute, 'wb')
+    w = png.Writer(len(result[0]), len(result), greyscale=True, bitdepth=bitdepth)
+    w.write(f, result)
+    f.close()
